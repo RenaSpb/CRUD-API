@@ -1,11 +1,12 @@
 import http from 'http';
 import dotenv from 'dotenv';
-import { getAllUsers, getUserById, createUser } from './users';
-import { validate as uuidValidate } from 'uuid';
+import { getAllUsers, getUserById, createUser, updateUser, isValidUUID } from './users';
+import { validate as uuidValidate, version as uuidVersion } from 'uuid';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
+
 
 const sendJsonResponse = (res: http.ServerResponse, statusCode: number, data: any) => {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -48,6 +49,29 @@ const handleGetUserById = (res: http.ServerResponse, userId: string) => {
     }
 };
 
+const handleUserUpdate = (req: http.IncomingMessage, res: http.ServerResponse, userId: string) => {
+    if (!isValidUUID(userId)) {
+        sendJsonResponse(res, 400, { message: 'Invalid userId format' });
+        return;
+    }
+
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+        try {
+            const userData = JSON.parse(body);
+            const updatedUser = updateUser(userId, userData);
+            if (updatedUser) {
+                sendJsonResponse(res, 200, updatedUser);
+            } else {
+                sendJsonResponse(res, 404, { message: 'User not found' });
+            }
+        } catch (error) {
+            sendJsonResponse(res, 400, { message: 'Invalid JSON in request body' });
+        }
+    });
+};
+
 const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = req.url;
     const method = req.method;
@@ -60,6 +84,8 @@ const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) =>
         handleCreateUser(req, res);
     } else if (method === 'GET' && urlParts[2] === 'users' && userId) {
         handleGetUserById(res, userId);
+    } else if (method === 'PUT' && urlParts[2] === 'users' && userId) {
+        handleUserUpdate(req, res, userId);
     } else {
         sendJsonResponse(res, 404, { message: 'Not Found' });
     }

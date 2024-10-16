@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as uuidValidate, version as uuidVersion } from 'uuid';
 
 interface User {
     id: string;
@@ -12,6 +12,10 @@ const users: User[] = [
     { id: uuidv4(), username: 'Arya Stark', age: 25, hobbies: ['assassinating', 'traveling'] },
     { id: uuidv4(), username: 'Daenerys Targaryen', age: 28, hobbies: ['dragon riding', 'conquering'] },
 ];
+
+export function isValidUUID(uuid: string): boolean {
+    return uuidValidate(uuid) && uuidVersion(uuid) === 4;
+}
 
 export const getAllUsers = (): User[] => users;
 
@@ -29,3 +33,13 @@ export const createUser = (userData: { username: string; age: number; hobbies: s
     users.push(newUser);
     return newUser;
 };
+
+export const updateUser = (id: string, userData: Partial<User>): User | null => {
+    if (!isValidUUID(id)) return null;
+    const index = users.findIndex(user => user.id = id);
+    if (index!= -1) {
+        users[index] = {...users[index], ...userData};
+        return users[index];
+    }
+    return null
+}
