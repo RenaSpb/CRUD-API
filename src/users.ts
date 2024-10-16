@@ -2,15 +2,21 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface User {
     id: string;
-    name: string;
+    username: string;
     age: number;
-    profession: string;
+    hobbies: string[];
 }
 
 const users: User[] = [
-    { id: uuidv4(), name: 'Jon Snow', age: 30, profession: 'Savior' },
-    { id: uuidv4(), name: 'Arya Stark', age: 25, profession: 'Guard' },
+    { id: uuidv4(), username: 'Jon Snow', age: 30, hobbies: ['sword fighting', 'brooding'] },
+    { id: uuidv4(), username: 'Arya Stark', age: 25, hobbies: ['assassinating', 'traveling'] },
+    { id: uuidv4(), username: 'Daenerys Targaryen', age: 28, hobbies: ['dragon riding', 'conquering'] },
 ];
 
-// Функция для получения всех пользователей
 export const getAllUsers = (): User[] => users;
+
+export const getUserById = (id: string): User | null => {
+    const user = users.find(user => user.id === id);
+    return user || null;
+};
+
