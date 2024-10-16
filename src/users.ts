@@ -20,3 +20,12 @@ export const getUserById = (id: string): User | null => {
     return user || null;
 };
 
+export const createUser = (userData: { username: string; age: number; hobbies: string[] }): User => {
+    console.log('Creating user with data:', userData);
+    const newUser: User = {
+        id: uuidv4(),
+        ...userData
+    };
+    users.push(newUser);
+    return newUser;
+};
