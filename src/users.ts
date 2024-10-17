@@ -1,17 +1,13 @@
 import { v4 as uuidv4, validate as uuidValidate, version as uuidVersion } from 'uuid';
 
-interface User {
+export interface User {
     id: string;
     username: string;
     age: number;
     hobbies: string[];
 }
 
-const users: User[] = [
-    { id: uuidv4(), username: 'Jon Snow', age: 30, hobbies: ['sword fighting', 'brooding'] },
-    { id: uuidv4(), username: 'Arya Stark', age: 25, hobbies: ['assassinating', 'traveling'] },
-    { id: uuidv4(), username: 'Daenerys Targaryen', age: 28, hobbies: ['dragon riding', 'conquering'] },
-];
+const users: User[] = [];
 
 export function isValidUUID(uuid: string): boolean {
     return uuidValidate(uuid) && uuidVersion(uuid) === 4;
