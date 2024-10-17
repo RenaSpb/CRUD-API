@@ -1,12 +1,11 @@
 import http from 'http';
 import dotenv from 'dotenv';
-import { getAllUsers, getUserById, createUser, updateUser, isValidUUID } from './users';
+import { getAllUsers, getUserById, createUser, updateUser, isValidUUID, deleteUser } from './users';
 import { validate as uuidValidate, version as uuidVersion } from 'uuid';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-
 
 const sendJsonResponse = (res: http.ServerResponse, statusCode: number, data: any) => {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -72,6 +71,21 @@ const handleUserUpdate = (req: http.IncomingMessage, res: http.ServerResponse, u
     });
 };
 
+const handleDeleteUser = (res: http.ServerResponse, userId: string) => {
+    if (!isValidUUID(userId)) {
+        sendJsonResponse(res, 400, { message: 'Invalid userId format' });
+        return;
+    }
+
+    const userDeleted = deleteUser(userId);
+    if (userDeleted) {
+        res.writeHead(204);
+        res.end();
+    } else {
+        sendJsonResponse(res, 404, { message: 'User not found' });
+    }
+};
+
 const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = req.url;
     const method = req.method;
@@ -86,6 +100,8 @@ const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) =>
         handleGetUserById(res, userId);
     } else if (method === 'PUT' && urlParts[2] === 'users' && userId) {
         handleUserUpdate(req, res, userId);
+    } else if (method === 'DELETE' && urlParts[2] === 'users' && userId) {
+        handleDeleteUser(res, userId);
     } else {
         sendJsonResponse(res, 404, { message: 'Not Found' });
     }

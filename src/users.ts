@@ -25,8 +25,7 @@ export const getUserById = (id: string): User | null => {
 };
 
 export const createUser = (userData: { username: string; age: number; hobbies: string[] }): User => {
-    console.log('Creating user with data:', userData);
-    const newUser: User = {
+   const newUser: User = {
         id: uuidv4(),
         ...userData
     };
@@ -43,3 +42,13 @@ export const updateUser = (id: string, userData: Partial<User>): User | null => 
     }
     return null
 }
+
+export const deleteUser = (id: string): boolean => {
+    const index = users.findIndex(user => user.id === id);
+    if (index !== -1) {
+        users.splice(index, 1);
+        return true;
+    }
+    return false;
+};
+
