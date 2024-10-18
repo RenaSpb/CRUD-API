@@ -9,62 +9,66 @@ export interface User {
     hobbies: string[];
 }
 
-const dataFilePath = path.join(__dirname, 'users.json');
+const dataFilePath: string = path.join(__dirname, 'db.json');
 
-// Функция для чтения пользователей из файла
-const readUsersFromFile = (): User[] => {
+export const readUsersFromFile = (): User[] => {
     if (!fs.existsSync(dataFilePath)) {
         return [];
     }
     const data = fs.readFileSync(dataFilePath, 'utf-8');
-    return JSON.parse(data) as User[];
+    try {
+        return JSON.parse(data) as User[];
+    } catch (error) {
+        return [];
+    }
 };
 
-// Функция для записи пользователей в файл
-const writeUsersToFile = (users: User[]): void => {
+export const writeUsersToFile = (users: User[]): void => {
     fs.writeFileSync(dataFilePath, JSON.stringify(users, null, 2));
 };
-
-// Загружаем пользователей из файла
-const users: User[] = readUsersFromFile();
 
 export function isValidUUID(uuid: string): boolean {
     return uuidValidate(uuid) && uuidVersion(uuid) === 4;
 }
 
-export const getAllUsers = (): User[] => users;
+export const getAllUsers = (): User[] => {
+    return readUsersFromFile();
+};
 
 export const getUserById = (id: string): User | null => {
-    const user = users.find(user => user.id === id);
-    return user || null;
+    const users = readUsersFromFile();
+    return users.find(user => user.id === id) || null;
 };
 
 export const createUser = (userData: { username: string; age: number; hobbies: string[] }): User => {
+    const users = readUsersFromFile();
     const newUser: User = {
         id: uuidv4(),
         ...userData
     };
     users.push(newUser);
-    writeUsersToFile(users); // Записываем данные обратно в файл
+    writeUsersToFile(users);
     return newUser;
 };
 
 export const updateUser = (id: string, userData: Partial<User>): User | null => {
     if (!isValidUUID(id)) return null;
-    const index = users.findIndex(user => user.id === id); // Исправлено: было = на ===
+    const users = readUsersFromFile();
+    const index = users.findIndex(user => user.id === id);
     if (index !== -1) {
         users[index] = { ...users[index], ...userData };
-        writeUsersToFile(users); // Записываем изменения в файл
+        writeUsersToFile(users);
         return users[index];
     }
     return null;
 };
 
 export const deleteUser = (id: string): boolean => {
+    const users = readUsersFromFile();
     const index = users.findIndex(user => user.id === id);
     if (index !== -1) {
         users.splice(index, 1);
-        writeUsersToFile(users); // Записываем изменения в файл
+        writeUsersToFile(users);
         return true;
     }
     return false;

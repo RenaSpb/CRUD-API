@@ -12,8 +12,7 @@ const sendJsonResponse = (res: http.ServerResponse, statusCode: number, data: an
     res.end(JSON.stringify(data));
 };
 
-const handleServerError = (res: http.ServerResponse, error: Error) => {
-    console.error('Server error:', error);
+const handleServerError = (res: http.ServerResponse, error: unknown) => {
     sendJsonResponse(res, 500, { message: 'Internal server error' });
 };
 
@@ -22,7 +21,7 @@ const handleGetAllUsers = (res: http.ServerResponse) => {
         const users = getAllUsers();
         sendJsonResponse(res, 200, users);
     } catch (error) {
-        handleServerError(res, error as Error);
+        handleServerError(res, error);
     }
 };
 
@@ -39,7 +38,7 @@ const handleCreateUser = (req: http.IncomingMessage, res: http.ServerResponse) =
             const newUser = createUser(userData);
             sendJsonResponse(res, 201, newUser);
         } catch (error) {
-            handleServerError(res, error as Error);
+            handleServerError(res, error);
         }
     });
 };
@@ -57,7 +56,7 @@ const handleGetUserById = (res: http.ServerResponse, userId: string) => {
             sendJsonResponse(res, 404, { message: 'User not found' });
         }
     } catch (error) {
-        handleServerError(res, error as Error);
+        handleServerError(res, error);
     }
 };
 
@@ -79,7 +78,7 @@ const handleUserUpdate = (req: http.IncomingMessage, res: http.ServerResponse, u
                 sendJsonResponse(res, 404, { message: 'User not found' });
             }
         } catch (error) {
-            handleServerError(res, error as Error);
+            handleServerError(res, error);
         }
     });
 };
@@ -99,7 +98,7 @@ const handleDeleteUser = (res: http.ServerResponse, userId: string) => {
             sendJsonResponse(res, 404, { message: 'User not found' });
         }
     } catch (error) {
-        handleServerError(res, error as Error);
+        handleServerError(res, error);
     }
 };
 
@@ -124,16 +123,15 @@ const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) =>
             sendJsonResponse(res, 404, { message: 'Endpoint not found' });
         }
     } catch (error) {
-        handleServerError(res, error as Error);
+        handleServerError(res, error);
     }
 };
 
-export const createServer = (): http.Server => {
-    console.log('Creating server in index.ts');
+const createServer = (): http.Server => {
     return http.createServer(requestListener);
 };
 
-export const server = createServer(); // Создаем и экспортируем сервер
+export const server = createServer();
 
 if (require.main === module) {
     server.listen(PORT, () => {

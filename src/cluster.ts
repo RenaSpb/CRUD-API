@@ -1,44 +1,150 @@
-import cluster from 'cluster';
-import { cpus } from 'os';
 import http from 'http';
-import * as indexModule from './index';
+import cluster from 'cluster';
+import os from 'os';
+import dotenv from 'dotenv';
+import { getAllUsers, getUserById, createUser, updateUser, isValidUUID, deleteUser } from './users';
+import { validate as uuidValidate } from 'uuid';
 
-const createServer = indexModule.createServer;
-const numCPUs = cpus().length - 1;
-const BASE_PORT = 4000;
+dotenv.config();
 
-if (cluster.isPrimary) {
-    console.log(`Primary ${process.pid} is running`);
+const PORT = 4000;
+const NUM_CPUS = os.cpus().length;
 
-    let currentWorker = 0;
-    const workerPorts = new Map<number, number>();
+const sendJsonResponse = (res: http.ServerResponse, statusCode: number, data: any) => {
+    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+};
 
-    const loadBalancer = http.createServer((req, res) => {
-        const workers = cluster.workers;
-        if (!workers) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('No workers available');
+const handleServerError = (res: http.ServerResponse, error: unknown) => {
+    sendJsonResponse(res, 500, { message: 'Internal server error' });
+};
+
+const handleGetAllUsers = (res: http.ServerResponse) => {
+    try {
+        const users = getAllUsers();
+        sendJsonResponse(res, 200, users);
+    } catch (error) {
+        handleServerError(res, error);
+    }
+};
+
+const handleCreateUser = (req: http.IncomingMessage, res: http.ServerResponse) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+        try {
+            const userData = JSON.parse(body);
+            if (!userData.username || !userData.age || !Array.isArray(userData.hobbies)) {
+                sendJsonResponse(res, 400, { message: 'Missing required fields' });
+                return;
+            }
+            const newUser = createUser(userData);
+            sendJsonResponse(res, 201, newUser);
+        } catch (error) {
+            handleServerError(res, error);
+        }
+    });
+};
+
+const handleGetUserById = (res: http.ServerResponse, userId: string) => {
+    try {
+        if (!uuidValidate(userId)) {
+            sendJsonResponse(res, 400, { message: 'Invalid userId format' });
+            return;
+        }
+        const user = getUserById(userId);
+        if (user) {
+            sendJsonResponse(res, 200, user);
+        } else {
+            sendJsonResponse(res, 404, { message: 'User not found' });
+        }
+    } catch (error) {
+        handleServerError(res, error);
+    }
+};
+
+const handleUserUpdate = (req: http.IncomingMessage, res: http.ServerResponse, userId: string) => {
+    if (!isValidUUID(userId)) {
+        sendJsonResponse(res, 400, { message: 'Invalid userId format' });
+        return;
+    }
+
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+        try {
+            const userData = JSON.parse(body);
+            const updatedUser = updateUser(userId, userData);
+            if (updatedUser) {
+                sendJsonResponse(res, 200, updatedUser);
+            } else {
+                sendJsonResponse(res, 404, { message: 'User not found' });
+            }
+        } catch (error) {
+            handleServerError(res, error);
+        }
+    });
+};
+
+const handleDeleteUser = (res: http.ServerResponse, userId: string) => {
+    try {
+        if (!isValidUUID(userId)) {
+            sendJsonResponse(res, 400, { message: 'Invalid userId format' });
             return;
         }
 
-        const workerIds = Object.keys(workers).map(Number);
-        if (workerIds.length === 0) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('No workers available');
-            return;
+        const userDeleted = deleteUser(userId);
+        if (userDeleted) {
+            res.writeHead(204);
+            res.end();
+        } else {
+            sendJsonResponse(res, 404, { message: 'User not found' });
         }
+    } catch (error) {
+        handleServerError(res, error);
+    }
+};
 
-        const workerIndex = currentWorker % workerIds.length;
-        const workerId = workerIds[workerIndex];
-        const workerPort = workerPorts.get(workerId);
+const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) => {
+    try {
+        const url = req.url;
+        const method = req.method;
+        const urlParts = url?.split('/') || [];
+        const userId = urlParts[3];
 
-        if (!workerPort) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('Worker not ready');
-            return;
+        if (url === '/api/users' && method === 'GET') {
+            handleGetAllUsers(res);
+        } else if (url === '/api/users' && method === 'POST') {
+            handleCreateUser(req, res);
+        } else if (method === 'GET' && urlParts[2] === 'users' && userId) {
+            handleGetUserById(res, userId);
+        } else if (method === 'PUT' && urlParts[2] === 'users' && userId) {
+            handleUserUpdate(req, res, userId);
+        } else if (method === 'DELETE' && urlParts[2] === 'users' && userId) {
+            handleDeleteUser(res, userId);
+        } else {
+            sendJsonResponse(res, 404, { message: 'Endpoint not found' });
         }
+    } catch (error) {
+        handleServerError(res, error);
+    }
+};
 
-        const options = {
+const createWorkerServer = (port: number): http.Server => {
+    const server = http.createServer(requestListener);
+    server.listen(port, () => {
+        console.log(`Worker server is running on port ${port}`);
+    });
+    return server;
+};
+
+const createLoadBalancer = (workers: number[]): http.Server => {
+    let current = 0;
+    const server = http.createServer((req, res) => {
+        const workerPort = workers[current];
+        current = (current + 1) % workers.length;
+
+        const options: http.RequestOptions = {
             hostname: 'localhost',
             port: workerPort,
             path: req.url,
@@ -52,43 +158,32 @@ if (cluster.isPrimary) {
         });
 
         req.pipe(proxyReq, { end: true });
-
-        currentWorker = (currentWorker + 1) % workerIds.length;
     });
 
-    loadBalancer.listen(BASE_PORT, () => {
-        console.log(`Load balancer listening on port ${BASE_PORT}`);
+    server.listen(PORT, () => {
+        console.log(`Load balancer is running on port ${PORT}`);
     });
 
-    for (let i = 0; i < numCPUs; i++) {
-        const workerPort = BASE_PORT + i + 1;
-        const worker = cluster.fork({ WORKER_PORT: workerPort });
+    return server;
+};
 
-        worker.on('message', (msg: { port: number }) => {
-            if (msg.port) {
-                workerPorts.set(worker.id, msg.port);
-            }
-        });
+if (cluster.isPrimary) {
+    console.log(`Primary ${process.pid} is running`);
+
+    const workerPorts: number[] = [];
+
+    for (let i = 1; i < NUM_CPUS; i++) {
+        const workerPort = PORT + i;
+        cluster.fork({ PORT: workerPort });
+        workerPorts.push(workerPort);
     }
+
+    createLoadBalancer(workerPorts);
 
     cluster.on('exit', (worker, code, signal) => {
         console.log(`Worker ${worker.process.pid} died`);
-        workerPorts.delete(worker.id);
-        const newWorkerPort = BASE_PORT + worker.id; // Keep the port logic for new workers
-        const newWorker = cluster.fork({ WORKER_PORT: newWorkerPort });
-        newWorker.on('message', (msg: { port: number }) => {
-            if (msg.port) {
-                workerPorts.set(newWorker.id, msg.port);
-            }
-        });
     });
 } else {
-    const port = process.env.WORKER_PORT || 0;
-    const server = createServer();
-    server.listen(port, () => {
-        console.log(`Worker ${process.pid} is listening on port ${port}`);
-        if (process.send) {
-            process.send({ port });
-        }
-    });
+    const workerPort = parseInt(process.env.PORT || '4001');
+    createWorkerServer(workerPort);
 }

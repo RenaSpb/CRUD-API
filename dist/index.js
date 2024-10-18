@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createServer = void 0;
+exports.server = void 0;
 const http_1 = __importDefault(require("http"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const users_1 = require("./users");
@@ -15,7 +15,6 @@ const sendJsonResponse = (res, statusCode, data) => {
     res.end(JSON.stringify(data));
 };
 const handleServerError = (res, error) => {
-    console.error('Server error:', error);
     sendJsonResponse(res, 500, { message: 'Internal server error' });
 };
 const handleGetAllUsers = (res) => {
@@ -135,13 +134,11 @@ const requestListener = (req, res) => {
     }
 };
 const createServer = () => {
-    console.log('Creating server in index.ts');
     return http_1.default.createServer(requestListener);
 };
-exports.createServer = createServer;
+exports.server = createServer();
 if (require.main === module) {
-    const server = (0, exports.createServer)();
-    server.listen(PORT, () => {
+    exports.server.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
 }
