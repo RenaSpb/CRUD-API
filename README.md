@@ -4,7 +4,7 @@ This is a simple CRUD (Create, Read, Update, Delete) API built with Node.js and 
 ## Installation
 1. Clone the repository
 2. Install dependencies: npm install
-3. Create a .env file in the root directory and add: PORT=3000
+3. Create a .env file in the root directory of project and add: PORT=3000
 4. Running the Application:
 
    - Development mode: 
