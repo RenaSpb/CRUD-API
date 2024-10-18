@@ -1,11 +1,11 @@
 import http from 'http';
 import dotenv from 'dotenv';
 import { getAllUsers, getUserById, createUser, updateUser, isValidUUID, deleteUser } from './users';
-import { validate as uuidValidate, version as uuidVersion } from 'uuid';
+import { validate as uuidValidate } from 'uuid';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 const sendJsonResponse = (res: http.ServerResponse, statusCode: number, data: any) => {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -128,7 +128,12 @@ const requestListener = (req: http.IncomingMessage, res: http.ServerResponse) =>
     }
 };
 
-export const server = http.createServer(requestListener);
+export const createServer = (): http.Server => {
+    console.log('Creating server in index.ts');
+    return http.createServer(requestListener);
+};
+
+export const server = createServer(); // Создаем и экспортируем сервер
 
 if (require.main === module) {
     server.listen(PORT, () => {

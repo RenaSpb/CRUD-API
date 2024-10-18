@@ -3,11 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.createUser = exports.getUserById = exports.getAllUsers = void 0;
 exports.isValidUUID = isValidUUID;
 const uuid_1 = require("uuid");
-const users = [
-    { id: (0, uuid_1.v4)(), username: 'Jon Snow', age: 30, hobbies: ['sword fighting', 'brooding'] },
-    { id: (0, uuid_1.v4)(), username: 'Arya Stark', age: 25, hobbies: ['assassinating', 'traveling'] },
-    { id: (0, uuid_1.v4)(), username: 'Daenerys Targaryen', age: 28, hobbies: ['dragon riding', 'conquering'] },
-];
+const users = [];
 function isValidUUID(uuid) {
     return (0, uuid_1.validate)(uuid) && (0, uuid_1.version)(uuid) === 4;
 }

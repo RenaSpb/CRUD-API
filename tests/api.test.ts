@@ -1,6 +1,5 @@
 import request from 'supertest';
-import { server } from '../src';
-import { User } from '../src/users';
+import { server } from '../src/index';
 
 describe('User API', () => {
     let createdUserId: string;
@@ -64,7 +63,5 @@ describe('User API', () => {
         const response = await request(server).get(`/api/users/${createdUserId}`);
         expect(response.status).toBe(404);
     });
-
-
 
 });
