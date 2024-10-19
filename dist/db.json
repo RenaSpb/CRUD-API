@@ -1,0 +1,12 @@
+[
+  {
+    "id": "3e715c4c-9667-4b93-bf98-bc049af58c42",
+    "username": "john_doe2",
+    "age": 33,
+    "hobbies": [
+      "reading",
+      "cycling",
+      "photography"
+    ]
+  }
+]
